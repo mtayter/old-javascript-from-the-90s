@@ -1,0 +1,126 @@
+<style>
+	body	{cursor:default}
+</style>
+
+<script>
+	var minDist = 50;
+	var curLevel = 1;
+	var inc = 2;
+	document.onmousemove = function(e) {
+		evnt = e ? e : window.event;
+		obj = document.getElementById('clickme');
+
+		mouseX = evnt.clientX;
+		mouseY = evnt.clientY;
+
+		width = obj.style.width.replace('px','');
+		height = obj.style.height.replace('px','');
+
+		leftX = obj.style.left.replace('px','');
+		rightX = Number(leftX) + Number(width);
+
+		topY = obj.style.top.replace('px','');
+		bottomY = Number(topY) + Number(height);
+
+		windowWidth = document.body.clientWidth;
+		windowHeight = document.body.clientHeight;
+
+		// if we get inside the box then it must be at the end so jump away from the edge
+		if(mouseX >= leftX && mouseX <= rightX && mouseY >= topY && mouseY <= bottomY) {
+			if(leftX == 0) {
+				obj.style.left = minDist + 'px';
+			} else if(rightX == windowWidth) {
+				obj.style.left = windowWidth - minDist + 'px';
+			}
+			if(topY == 0) {
+				obj.style.top = minDist + 'px';
+			} else if(bottomY == windowHeight) {
+				obj.style.top = windowHeight - minDist + 'px';
+			}
+			return;
+		}
+
+		if(mouseX < leftX) {
+			distX = mouseX - leftX;
+		} else if (mouseX > rightX) {
+			distX = mouseX - rightX;
+		} else {
+			distX = 0;
+		}
+
+		if(mouseY < topY) {
+			distY = mouseY - topY;
+		} else if (mouseY > bottomY) {
+			distY = mouseY - bottomY;
+		} else {
+			distY = 0;
+		}
+
+		dist = Math.sqrt(Math.pow(distX,2) + Math.pow(distY,2));
+
+		if(dist < minDist) {
+
+			if(distX < 0) {
+				newX = Number(leftX) + Number(inc);
+			} else if (distX > 0) {
+				newX = Number(leftX) - Number(inc);
+			} else {
+				newX = leftX;
+			}
+
+			if(distY < 0) {
+				newY = Number(topY) + Number(inc);
+			} else if (distY > 0) {
+				newY = Number(topY) - Number(inc);
+			} else {
+				newY = topY;
+			}
+
+			if(newX < 0) {
+				newX = 0;
+			} else if(newX > document.body.clientWidth - width) {
+				newX = document.body.clientWidth - width;
+			}
+
+			if(newY < 0) {
+				newY = 0;
+			} else if(newY > document.body.clientHeight - height) {
+				newY = document.body.clientHeight - height;
+			}
+
+			obj.style.left = newX + 'px';
+			obj.style.top = newY + 'px';
+		}
+	}
+	function gotIt() {
+		if(curLevel == 3) {
+			alert('YOU WIN!!!!');
+			nme = prompt('Enter your name?','');
+			alert(nme + ' sucks.');
+			location = 'about:blank';
+		}
+		curLevel++;
+		document.getElementById('level_disp').innerHTML = curLevel;
+		if(curLevel == 2) {
+			alert('Level 2');
+			inc = 10;
+		} else if(curLevel == 3) {
+			alert('Level 3');
+			inc = 20;
+		}
+		obj = document.getElementById('clickme');
+		obj.style.left = '0px';
+		obj.style.top = '0px';
+	}
+	document.onselectstart = function() { return false };
+	document.onmousedown = function() { return false};
+</script>
+
+<div style="position:absolute;left:0px;top:0px;width:20px;height:20px;background-color:salmon" id="clickme">
+	<div style="font-size:1;position:relative;left:5px;top:5px;width:10px;height:10px;background-color:6666ff;cursor:pointer" id="clickme" onClick="gotIt()"></div>
+</div>
+
+<center>
+<font size="6" color="cccccc"><b><br><br>LEVEL <span id="level_disp">1</span></b></font>
+<br><br><br><br><font size="5" color="cccccc">click the blue square to advance</font>
+</center>

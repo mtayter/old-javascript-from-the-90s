@@ -1,0 +1,616 @@
+<style>
+	table.board				{border:1px solid black;border-collapse:collapse}
+	table.board td			{width:35px;height:35px;text-align:center}
+	table.board td.black	{background-color:gray}
+	table.board td.white	{background-color:white}
+	img						{position:relative;cursor:pointer}
+	input					{width:80px}
+	span					{display:none}
+</style>
+
+<script>
+	// global variables
+	var game;
+	var display;
+
+	// classes
+	function Game() {
+		this.nextState = null;
+		this.grabbedPiece = null;
+		this.xOffset = null;
+		this.yOffset = null;
+		this.topZ = 0;
+		this.hightlighted = null;
+		this.lastMoveX = null;
+		this.lastMoveY = null;
+		this.promoteX = null;
+		this.promoteY = null;
+		this.history = new Array();
+		this.curStep = -1;
+		s = new State();
+		s.init();
+		this.next(s);
+	}
+	function enableControls() {
+		document.controls.back.disabled = (this.curStep == 0);
+		document.controls.forward.disabled = (this.history.length <= this.curStep+1);
+	}
+	function previous() {
+		if(this.curStep > 0) {
+			this.curStep--;
+			this.display();
+		}
+		this.enableControls();
+	}
+	function changeHighlight(space) {
+		if(this.highlighted) {
+			this.highlighted.style.backgroundColor = '';
+		}
+		if(space) {
+			this.highlighted = space;
+			this.highlighted.style.backgroundColor = 'salmon';
+		} else {
+			this.highlighted = null;
+		}
+	}
+	function next(newState) {
+		if(newState) {
+			if(this.history.length > this.curStep+1) {
+				this.history.length = this.curStep + 1;
+			}
+			this.history.push(newState);
+		} else {
+			if(this.history.length <= this.curStep+1) {
+				return;
+			}
+		}
+		this.curStep++;
+		this.display();
+		this.enableControls();
+	}
+	function display() {
+		s = this.history[this.curStep];
+		for(var x=0;x<8;x++) {
+			for(var y=0;y<8;y++) {
+				cell = display[x][y];
+				piece = s.board[x][y];
+				if(piece) {
+					if(!cell.hasChildNodes() || cell.firstChild.color != piece.color || cell.firstChild.which != piece.which) {
+						newPiece = createPieceImg(piece.color,piece.which,x,y);
+						if(!cell.hasChildNodes()) {
+							cell.appendChild(newPiece);
+						} else {
+							cell.replaceChild(newPiece,cell.firstChild);
+						}
+					}
+				} else {
+					if(cell.hasChildNodes()) {
+						cell.removeChild(cell.firstChild);
+					}
+				}
+			}
+		}
+	}
+	function getNextState() {
+		s1 = this.history[this.curStep];
+		var s2 = new State();
+		for(var x=0;x<8;x++) {
+			for(var y=0;y<8;y++) {
+				s2.board[x][y] = s1.board[x][y];
+			}
+		}
+		if(s1.turn == 'white') {
+			s2.turn = 'black';
+		} else {
+			s2.turn = 'white';
+		}
+
+		s2.whiteKingMoved = s1.whiteKingMoved;
+		s2.whiteLeftRookMoved = s1.whiteLeftRookMoved;
+		s2.whiteRightRookMoved = s1.whiteRightRookMoved;
+
+		s2.blackKingMoved = s1.blackKingMoved;
+		s2.blackLeftRookMoved = s1.blackLeftRookMoved;
+		s2.blackRightRookMoved = s1.blackRightRookMoved;
+
+		s2.whiteKingX = s1.whiteKingX;
+		s2.whiteKingY = s1.whiteKingY;
+		s2.blackKingX = s1.blackKingX;
+		s2.blackKingY = s1.blackKingY;
+
+		s2.enPassantX = s1.enPassantX;
+		s2.enPassantY = s1.enPassantY;
+
+		return s2;
+	}
+	Game.prototype.enableControls = enableControls;
+	Game.prototype.previous = previous;
+	Game.prototype.changeHighlight = changeHighlight;
+	Game.prototype.next = next;
+	Game.prototype.display = display;
+	Game.prototype.getNextState = getNextState;
+
+	function Piece(color,which) {
+		this.color = color;
+		this.which = which;
+	}
+
+	function State() {
+		this.board = createBoard();
+	}
+	function init() {
+		this.board[0][0] = new Piece('white','rook');
+		this.board[1][0] = new Piece('white','knight');
+		this.board[2][0] = new Piece('white','bishop');
+		this.board[3][0] = new Piece('white','queen');
+		this.board[4][0] = new Piece('white','king');
+		this.board[5][0] = new Piece('white','bishop');
+		this.board[6][0] = new Piece('white','knight');
+		this.board[7][0] = new Piece('white','rook');
+	
+		for(var i=0;i<8;i++) {
+			this.board[i][1] = new Piece('white','pawn');
+			this.board[i][6] = new Piece('black','pawn');
+		}
+	
+		this.board[0][7] = new Piece('black','rook');
+		this.board[1][7] = new Piece('black','knight');
+		this.board[2][7] = new Piece('black','bishop');
+		this.board[3][7] = new Piece('black','queen');
+		this.board[4][7] = new Piece('black','king');
+		this.board[5][7] = new Piece('black','bishop');
+		this.board[6][7] = new Piece('black','knight');
+		this.board[7][7] = new Piece('black','rook');
+
+		this.turn = 'white';
+		this.whiteKingX = 4;
+		this.whiteKingY = 0;
+		this.blackKingX = 4;
+		this.blackKingY = 7;
+
+		this.whiteKingMoved = false;
+		this.whiteLeftRookMoved = false;
+		this.whiteRightRookMoved = false;
+
+		this.blackKingMoved = false;
+		this.blackLeftRookMoved = false;
+		this.blackRightRookMoved = false;
+	}
+	function move(fromX,fromY,toX,toY,justChecking) {
+		if(toX < 0 || toX > 7 || toY < 0 || toY > 7) {
+			return false;
+		}
+
+		var piece = this.board[fromX][fromY];
+		var moveX = toX - fromX;
+		var moveY = toY - fromY;
+		var toSpace = this.board[toX][toY];
+
+		if(toSpace && toSpace.color == piece.color) {
+			return false;
+		}
+
+		if(moveX == 0) {
+			var dirX = 0;
+		} else {
+			var dirX = Math.abs(moveX) / moveX;
+			moveX = Math.abs(moveX);
+		}
+
+		if(moveY == 0) {
+			var dirY = 0;
+		} else {
+			var dirY = Math.abs(moveY) / moveY;
+			moveY = Math.abs(moveY);
+		}
+
+		var lastState = game.history[game.curStep];
+
+		if(!justChecking) {
+			this.enPassantX = null;
+			this.enPassantY = null;
+		}
+
+		switch(piece.which) {
+
+			case 'pawn':
+				if((piece.color == 'white' && dirY == -1) || (piece.color == 'black' && dirY == 1)) {
+					return false;
+				}
+				if(moveX == 1 && moveY == 1 && this.board[toX][toY]) {
+				} else if(moveX == 1 && moveY == 1 && lastState.enPassantX == toX && lastState.enPassantY == toY) {
+					if(!justChecking) {
+						this.board[toX][fromY] = null;
+					}
+				} else if(moveX == 0 && moveY == 1 && !this.board[toX][toY]) {
+				} else if(moveX == 0 && moveY == 2 && !this.board[toX][toY-dirY] && !this.board[toX][toY] &&
+					((piece.color == 'white' && fromY == 1) || (piece.color == 'black' && fromY == 6)) ) {
+					if(!justChecking) {
+						this.enPassantX = toX;
+						this.enPassantY = toY-dirY;
+					}
+				} else {
+					return false;
+				}
+				break;
+
+			case 'knight':
+				if((moveX != 1 || moveY != 2) && (moveX != 2 || moveY != 1)) {
+					return false;
+				}
+				break;
+
+			case 'rook':
+				if(moveX > 0 && moveY > 0) {
+					return false;
+				}
+				if(moveX > 0) {
+					for(var i=fromX+dirX;i!=toX;i=i+dirX) {
+						if(this.board[i][fromY]) {
+							return false;
+						}
+					}
+				}
+				if(moveY > 0) {
+					for(var i=fromY+dirY;i!=toY;i=i+dirY) {
+						if(this.board[fromX][i]) {
+							return false;
+						}
+					}
+				}
+				if(!justChecking) {
+					if(fromX == 0) {
+						eval('this.'+piece.color+'LeftRookMoved = true');
+					} else if(fromX == 7) {
+						eval('this.'+piece.color+'RightRookMoved = true');
+					}
+				}
+				break;
+
+			case 'bishop':
+				if(moveX != moveY) {
+					return false;
+				}
+				for(var i=1;i<moveX;i++) {
+					if(this.board[fromX+i*dirX][fromY+i*dirY]) {
+						return false;
+					}
+				}
+				break;
+
+			case 'queen':
+				if(moveX != moveY && moveX > 0 && moveY > 0) {
+					return false;
+				}
+				if(moveX > 0 && moveY > 0) {
+					for(var i=1;i<moveX;i++) {
+						if(this.board[fromX+i*dirX][fromY+i*dirY]) {
+							return false;
+						}
+					}
+				} else if(moveX > 0) {
+					for(var i=fromX+dirX;i!=toX;i=i+dirX) {
+						if(this.board[i][fromY]) {
+							return false;
+						}
+					}
+				} else if(moveY > 0) {
+					for(var i=fromY+dirY;i!=toY;i=i+dirY) {
+						if(this.board[fromX][i]) {
+							return false;
+						}
+					}
+				}
+				break;
+
+			case 'king':
+				kingMoved = eval('lastState.'+piece.color+'KingMoved');
+				leftRookMoved = eval('lastState.'+piece.color+'LeftRookMoved');
+				rightRookMoved = eval('lastState.'+piece.color+'RightRookMoved');
+				var castled = false;
+				if(moveX == 2 && moveY == 0 && !kingMoved) {
+					if(dirX == 1) {
+						var rookMoved = rightRookMoved;
+						var numSpaces = 2;
+						var rookX = 7;
+					} else {
+						var rookMoved = leftRookMoved;
+						var numSpaces = 3;
+						var rookX = 0;
+					}
+					if(rookMoved) {
+						return false;
+					}
+					for(var i=1;i<=numSpaces;i++) {
+						if(this.board[fromX+i*dirX][fromY]) {
+							return false;
+						}
+					}
+					if(this.underAttack(fromX+dirX,fromY)) {
+						return false;
+					}
+					if(!justChecking) {
+						this.board[fromX+dirX][fromY] = this.board[rookX][fromY];
+						this.board[rookX][fromY] = null;
+					}
+					castled = true;
+				}
+				if((moveX > 1 || moveY > 1) && !castled) {
+					return false;
+				}
+				if(!justChecking) {
+					eval('this.'+piece.color+'KingMoved = true');
+				}
+				break;
+		}
+
+		if(!justChecking) {
+			this.board[toX][toY] = this.board[fromX][fromY];
+			this.board[fromX][fromY] = null;
+			if(piece.which == 'king') {
+				eval('this.'+piece.color+'KingX = toX');
+				eval('this.'+piece.color+'KingY = toY');
+			}
+			if(this.underAttack(eval('this.'+piece.color+'KingX'),eval('this.'+piece.color+'KingY'))) {
+				return false;
+			}
+			if(piece.which == 'pawn' && (toY == 0 || toY == 7)) {
+				game.promoteX = toX;
+				game.promoteY = toY;
+			} else {
+				game.promoteX = null;
+				game.promoteY = null;
+			}
+		}
+		return true;
+	}
+	function underAttack(x,y) {
+		for(var i=0;i<8;i++) {
+			for(var j=0;j<8;j++) {
+				if(this.board[i][j] && this.board[i][j].color == this.turn && this.move(i,j,x,y,true)) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+	function promoteTo(piece) {
+		color = this.board[game.promoteX][game.promoteY].color;
+		this.board[game.promoteX][game.promoteY] = new Piece(color,piece);
+		game.display();
+		document.getElementById(color+'PromotionChoices').style.display = 'none';
+		game.enableControls();
+		game.promoteX = null;
+		game.promoteY = null;
+	}
+	State.prototype.init = init;
+	State.prototype.move = move;
+	State.prototype.underAttack = underAttack;
+	State.prototype.promoteTo = promoteTo;
+
+	function createBoard() {
+		var b = new Array(8);
+		for(var i=0;i<b.length;i++) {
+			b[i] = new Array(8);
+		}
+		return b;
+	}
+	function createPieceImg(color,which,x,y) {
+		newPiece = document.createElement('img');
+		newPiece.src = color + '_' + which + '.gif';
+		newPiece.piece = true;
+		newPiece.color = color;
+		newPiece.which = which;
+		newPiece.xIdx = x;
+		newPiece.yIdx = y;
+		return newPiece;
+	}
+
+	// events
+	window.onload = function() {
+		display = createBoard();
+		tds = document.getElementsByTagName('td');
+		spaces = new Array();
+		for(var i=0;i<tds.length;i++) {
+			if(tds[i].className == 'white' || tds[i].className == 'black') {
+				spaces.push(tds[i]);
+			}
+		}
+		for(var i=0;i<spaces.length;i++) {
+			x = i % 8;
+			y = 7 - Math.floor(i / 8);
+			display[x][y] = spaces[i];
+		}
+		game = new Game();
+	}
+	document.onmousedown = function(evnt) {
+		e = evnt ? evnt : window.event;
+		obj = e.target ? e.target : e.srcElement;
+		if(obj.piece) {
+			if(game.promoteX != null) {
+				alert('please choose promotion for pawn');
+			} else if(obj.color != game.history[game.curStep].turn) {
+				alert(game.history[game.curStep].turn + '\'s turn');
+			} else {
+				game.topZ++;
+				obj.style.zIndex = game.topZ;
+				game.xOffset = e.clientX - obj.style.left.replace('px','');
+				game.yOffset = e.clientY - obj.style.top.replace('px','');
+				game.grabbedPiece = obj;
+			}
+		}
+		return false;
+	}
+	document.onmousemove = function(evnt) {
+		if(game && game.grabbedPiece) {
+			e = evnt ? evnt : window.event;
+			game.grabbedPiece.style.left = e.clientX - game.xOffset + 'px';
+			game.grabbedPiece.style.top = e.clientY - game.yOffset + 'px';
+
+			moveX = Math.round(game.grabbedPiece.style.left.replace('px','') / 37);
+			moveY = -Math.round(game.grabbedPiece.style.top.replace('px','') / 35);
+
+			if(moveX == game.lastMoveX && moveY == game.lastMoveY) {
+				// don't check the same square over and over
+				return;
+			} else {
+				game.lastMoveX = moveX;
+				game.lastMoveY = moveY;
+			}
+
+			fromX = game.grabbedPiece.xIdx;
+			fromY = game.grabbedPiece.yIdx;
+			toX = fromX + moveX;
+			toY = fromY + moveY;
+
+			game.nextState = game.getNextState();
+			if(game.nextState.move(fromX,fromY,toX,toY)) {
+				game.changeHighlight(display[toX][toY]);
+			} else {
+				game.changeHighlight();
+				game.nextState = null;
+			}
+
+		}
+	}
+	document.onmouseup = function(evnt) {
+		if(game && game.grabbedPiece) {
+			game.changeHighlight();
+			game.grabbedPiece.style.left = '0px';
+			game.grabbedPiece.style.top = '0px';
+			game.grabbedPiece = null;
+			if(game.nextState) {
+				game.next(game.nextState);
+				if(game.promoteX != null) {
+					document.getElementById(game.history[game.curStep].board[game.promoteX][game.promoteY].color+'PromotionChoices').style.display = 'block';
+					document.controls.back.disabled = true;
+					document.controls.forward.disabled = true;
+				}
+				game.nextState = null;
+			}
+		}
+	}
+	document.ondragstart = function () {
+		return false;
+	}
+	document.onselectstart = function() {
+		return false;
+	}
+</script>
+
+<table>
+
+<tr><td>
+
+<table class="board">
+	<tr>
+		<td class="white"></td>
+		<td class="black"></td>
+		<td class="white"></td>
+		<td class="black"></td>
+		<td class="white"></td>
+		<td class="black"></td>
+		<td class="white"></td>
+		<td class="black"></td>
+	</tr>
+	<tr>
+		<td class="black"></td>
+		<td class="white"></td>
+		<td class="black"></td>
+		<td class="white"></td>
+		<td class="black"></td>
+		<td class="white"></td>
+		<td class="black"></td>
+		<td class="white"></td>
+	</tr>
+	<tr>
+		<td class="white"></td>
+		<td class="black"></td>
+		<td class="white"></td>
+		<td class="black"></td>
+		<td class="white"></td>
+		<td class="black"></td>
+		<td class="white"></td>
+		<td class="black"></td>
+	</tr>
+	<tr>
+		<td class="black"></td>
+		<td class="white"></td>
+		<td class="black"></td>
+		<td class="white"></td>
+		<td class="black"></td>
+		<td class="white"></td>
+		<td class="black"></td>
+		<td class="white"></td>
+	</tr>
+	<tr>
+		<td class="white"></td>
+		<td class="black"></td>
+		<td class="white"></td>
+		<td class="black"></td>
+		<td class="white"></td>
+		<td class="black"></td>
+		<td class="white"></td>
+		<td class="black"></td>
+	</tr>
+	<tr>
+		<td class="black"></td>
+		<td class="white"></td>
+		<td class="black"></td>
+		<td class="white"></td>
+		<td class="black"></td>
+		<td class="white"></td>
+		<td class="black"></td>
+		<td class="white"></td>
+	</tr>
+	<tr>
+		<td class="white"></td>
+		<td class="black"></td>
+		<td class="white"></td>
+		<td class="black"></td>
+		<td class="white"></td>
+		<td class="black"></td>
+		<td class="white"></td>
+		<td class="black"></td>
+	</tr>
+	<tr>
+		<td class="black"></td>
+		<td class="white"></td>
+		<td class="black"></td>
+		<td class="white"></td>
+		<td class="black"></td>
+		<td class="white"></td>
+		<td class="black"></td>
+		<td class="white"></td>
+	</tr>
+</table><p>
+
+</td></tr>
+
+<tr><td align="center">
+	<span id="blackPromotionChoices">
+		<b>Choose...</b><br>
+		<img src="black_rook.gif" onClick="game.history[game.curStep].promoteTo('rook')">
+		<img src="black_knight.gif" onClick="game.history[game.curStep].promoteTo('knight')">
+		<img src="black_bishop.gif" onClick="game.history[game.curStep].promoteTo('bishop')">
+		<img src="black_queen.gif" onClick="game.history[game.curStep].promoteTo('queen')"><p>
+	</span>
+</td></tr>
+<tr><td align="center">
+	<span id="whitePromotionChoices">
+		<b>Choose...</b><br>
+		<img src="white_rook.gif" onClick="game.history[game.curStep].promoteTo('rook')">
+		<img src="white_knight.gif" onClick="game.history[game.curStep].promoteTo('knight')">
+		<img src="white_bishop.gif" onClick="game.history[game.curStep].promoteTo('bishop')">
+		<img src="white_queen.gif" onClick="game.history[game.curStep].promoteTo('queen')"><p>
+	</span>
+</td></tr>
+
+<tr><td align="center">
+<form name="controls">
+<input type="button" name="back" value="Back" onClick="game.previous()" onDblClick="game.previous()" disabled>
+<input type="button" name="forward" value="Forward" onClick="game.next()" onDblClick="game.next()" disabled>
+</form>
+</td></tr>
+
+</table>

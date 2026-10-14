@@ -1,0 +1,145 @@
+<style>
+	body				{background-color:dddddd;overflow:hidden}
+	#groundID			{background-color:gray}
+	div,img,table		{position:absolute}
+</style>
+
+<script>
+	var numCentipedes = 5;
+	var bombFalling = false;
+	var missed = 0;
+	var killed = 0;
+	var shotsFired = 0;
+	window.onload = function() {
+		winWidth = window.innerWidth ? window.innerWidth : document.body.clientWidth;
+		winHeight = window.innerHeight ? window.innerHeight : document.body.clientHeight;
+
+		ground = document.getElementById('groundID');
+		ground.style.width = winWidth + 'px';
+		ground.style.left = '0px';
+		ground.style.height = '100px';
+		ground.style.top = winHeight - 100 + 'px';
+
+		bomb = document.getElementById('bombID');
+		bomb.style.visibility = 'hidden';
+
+		mario = document.getElementById('marioID');
+		mario.style.top = '50px';
+		mario.style.left = winWidth / 2 + 'px';
+
+		document.frm.centipedes.value = numCentipedes;
+		centipede = document.getElementById('centipedeID');
+		centipede.style.left = '-100px';
+		centipede.style.top = winHeight - 115 + 'px';
+
+		table = document.getElementById('tableID');
+		table.style.top = winHeight - 80 + 'px';
+		table.style.left = winWidth / 2 - 40 + 'px';
+
+		msg = 'Mario vs. Centipede\n\n';
+		msg += 'Left and Right Arrows to Move\n';
+		msg += 'Spacebar to Shoot\n\n';
+		msg += 'Ready?';
+		alert(msg);
+		window.focus();
+
+		newCentipede();
+		moveCentipede();
+	}
+	function move(e) {
+		winWidth = window.innerWidth ? window.innerWidth : document.body.clientWidth;
+		evnt = e ? e : window.event;
+		key = getKeyCode(e);
+		if(key == 37) {
+			dir = -1;
+		} else if(key == 39) {
+			dir = 1;
+		} else if(key == 32 && !bombFalling) {
+			releaseBomb();
+			return;
+		} else {
+			return;
+		}
+		mario = document.getElementById('marioID');
+		newLoc = Number(mario.style.left.replace('px','')) + 25 * dir;
+		if(newLoc > 0 && newLoc < winWidth - 32) {
+			mario.style.left = newLoc + 'px';
+		}
+	}
+	function newCentipede() {
+		centipede.style.left = -60;
+		if(document.frm.centipedes.value == 0) {
+			msg = shotsFired + ' Shots Fired\n\n';
+			msg += killed + ' Killed\n';
+			msg += missed + ' Missed';
+			alert(msg);
+			location.reload();
+		}
+		document.frm.centipedes.value = Number(document.frm.centipedes.value) - 1;
+	}
+	function getKeyCode(e) {
+		var str = e.which + '';
+		return (str != 'undefined') ? e.which : e.keyCode;
+	}
+	function releaseBomb() {
+		bombFalling = true;
+		shotsFired++;
+		mario = document.getElementById('marioID');
+		bomb = document.getElementById('bombID');
+		bomb.style.left = Number(mario.style.left.replace('px','')) + 10 + 'px';
+		bomb.style.top = Number(mario.style.top.replace('px','')) + 50 + 'px';
+		bomb.style.visibility = 'visible';
+		dropBomb();
+	}
+	function dropBomb() {
+		winHeight = window.innerHeight ? window.innerHeight : document.body.clientHeight;
+		bomb = document.getElementById('bombID');
+		bombTop = Number(bomb.style.top.replace('px',''));
+		bombLeft = Number(bomb.style.left.replace('px',''));
+
+		centipede = document.getElementById('centipedeID');
+		centipedeLeft = Number(centipede.style.left.replace('px',''));
+
+		if(bombTop > winHeight - 130 && bombLeft >= centipedeLeft - 10 && bombLeft <= centipedeLeft + 50) {
+			bomb.style.visibility = 'hidden';
+			bombFalling = false;
+			killed++;
+			newCentipede();
+		} else if(bombTop < winHeight - 105) {
+			bomb.style.top = bombTop + 5 + 'px';
+			window.setTimeout(dropBomb,10);
+		} else {
+			bomb.style.visibility = 'hidden';
+			bombFalling = false;
+		}
+	}
+	function moveCentipede() {
+		winWidth = window.innerWidth ? window.innerWidth : document.body.clientWidth;
+		centipede = document.getElementById('centipedeID');
+		curLeft = Number(centipede.style.left.replace('px',''));
+		if(curLeft < winWidth) {
+			centipede.style.left = curLeft + 5 + 'px';
+		} else {
+			missed++;
+			newCentipede();
+		}
+		window.setTimeout(moveCentipede,10);
+	}
+</script>
+
+<body onKeyDown="move(event)">
+
+<div id="groundID"></div>
+<img id="bombID" src="bomb.gif">
+<img id="marioID" src="mario.gif">
+<img id="centipedeID" src="centipede.gif">
+
+<form name="frm">
+<table id="tableID">
+	<tr>
+		<td><input name="centipedes" type="text" size="2" disabled></td>
+	</tr>
+</table>
+</form>
+
+</body>

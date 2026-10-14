@@ -1,0 +1,8 @@
+table		{border-style:solid; background-color:white;
+		border-color:bbbbff; border-width:5px; width:100%}
+thead,tfoot	{text-align:center; font-weight:bold;
+		background-color:bbbbff}
+tbody		{background-color:dddddd}
+
+.dragdrop	{position:relative}
+.dragbar	{cursor:move}
